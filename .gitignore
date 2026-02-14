@@ -1,0 +1,13 @@
+# 忽略编译产生的垃圾
+*.o
+*.obj
+*.exe
+*.dll
+*.lib
+*.pdb
+
+# 忽略编辑器的配置文件夹
+.vscode/
+.idea/
+build/
+dist/
