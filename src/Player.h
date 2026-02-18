@@ -11,12 +11,22 @@ public:
     // 弹夹
     std::vector<Bullet> bullets;
 
+    // [新增] 子弹池容量常量
+    // 屏幕上同时存在的子弹很难超过 30 发，给 30 足够了
+    static constexpr int MAX_BULLETS = 30;
+    
+    // --- [新增] 生存属性 ---
+    int hp;                 // 当前血量
+    float lastDamageTime;   // 上次受伤的时间点 (用于计算无敌帧)
+
     // 构造函数声明
     Player(float startX, float startY);
 
     // 方法声明 (注意后面是分号 ;)
     void Update() override;
     void Draw() override;
+    // --- [新增] 受伤方法 ---
+    // 传入伤害值，通常是 1
+    void TakeDamage(int damage);
 };
-
 #endif
