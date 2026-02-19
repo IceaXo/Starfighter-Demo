@@ -1,4 +1,5 @@
 #include "Player.h"
+#include "Config.h"
 
 // --- 构造函数实现 ---
 Player::Player(float startX, float startY) : Entity(startX, startY) {
@@ -42,6 +43,12 @@ void Player::Update()
     for(auto& b :bullets){
         if(b.active) b.Update();
     }
+
+    // 动态边界限制
+    if(x<radius) x=radius;
+    if (x > GameConfig::SCREEN_WIDTH - radius) x = GameConfig::SCREEN_WIDTH - radius;
+    if (y < radius) y = radius;
+    if (y > GameConfig::SCREEN_HEIGHT - radius) y = GameConfig::SCREEN_HEIGHT - radius;
 }
 
 void Player::TakeDamage(int damage)

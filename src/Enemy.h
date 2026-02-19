@@ -3,6 +3,7 @@
 
 #include "raylib.h"
 #include "Entity.h"
+#include "Config.h"
 
 class Enemy : public Entity {
 public:
@@ -16,7 +17,7 @@ public:
     // 每一帧往下飞
     void Update() override {
         y += speed; 
-        if (y > 600) active = false; // 飞出底部就标记死亡
+        if (y > GameConfig::SCREEN_HEIGHT+2*radius) active = false; // 飞出底部就标记死亡
     }
 };
 
