@@ -11,14 +11,14 @@ namespace GameConfig {
     constexpr int BASE_SPAWN_RATE = 60;      
     constexpr int MIN_SPAWN_RATE = 20;       
     constexpr int SCORE_PER_KILL = 100;      
-    constexpr int TARGET_SCORE = 2000;       
+    constexpr int TARGET_SCORE = 3000;       
     
     // --- 难度参数 ---
     constexpr int DIFFICULTY_STEP_RATE = 500;     
     constexpr int DIFFICULTY_STEP_SPEED = 200;
     constexpr float ENEMY_BASE_SPEED = 2.0f; 
-    constexpr float ENEMY_SPEED_INCREMENT = 0.3f;
+    constexpr float ENEMY_SPEED_INCREMENT = 0.5f;
 
     // --- 星空配置 ---
-    constexpr int MAX_STARS = 300;
+    constexpr int MAX_STARS = 1000;
 }

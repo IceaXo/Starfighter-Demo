@@ -9,6 +9,8 @@
 #include <vector>
 #include <string> // [韩立批注]: 为了方便显示分数文字
 
+unsigned int Enemy::next_id = 1;
+
 struct Star{
     float x,y;
     float speed;
@@ -91,7 +93,7 @@ int main(){
                 }
             }
             // --- 1. 逻辑更新 (Update) ---
-            myPlane.Update();
+            myPlane.Update(enemies);
             
             // [新增] 粒子特效状态更新
             ps.Update();
@@ -122,6 +124,7 @@ int main(){
                     for (auto& e:enemies){
                         if(!e.active){
                             e.active = true;
+                            e.unique_id = Enemy::next_id++;
                             e.x = (float)GetRandomValue(20,GameConfig::SCREEN_WIDTH-20);
                             e.y = -50;
                             int speedLevel = score / GameConfig::DIFFICULTY_STEP_SPEED;
@@ -147,6 +150,8 @@ int main(){
                         e.active=false;
                         b.active=false;
                         score +=GameConfig::SCORE_PER_KILL;
+                        myPlane.killStreak++;
+                        if(myPlane.killStreak>=5) {myPlane.currentWeapon = BulletType::HOMING;}
 
                         // ==========================================
                         // [新增法术：引爆粒子！]
@@ -165,6 +170,8 @@ int main(){
                         if(CheckCollisionCircles(Vector2{myPlane.x,myPlane.y},myPlane.radius,Vector2{e.x,e.y},e.radius)){
                             e.active = false;
                             myPlane.TakeDamage(1);
+                            myPlane.killStreak = 0;
+                            myPlane.currentWeapon = BulletType::NORMAL;
 
                             // [新增法术：玉石俱焚的爆炸！]
                             // 敌人炸出橙色火花，玩家受击炸出蓝色装甲碎片

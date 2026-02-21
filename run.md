@@ -8,4 +8,7 @@ git add .
 git commit -m "feat: Implement Object Pool and Survival Mechanics"
 git push
 
+更新计划：
+1.选择buff：杀5个开启追踪导弹；杀5个回一血；杀5个移速加快
+2.
 

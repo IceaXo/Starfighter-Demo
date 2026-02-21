@@ -1,5 +1,4 @@
-#ifndef ENTITY_H  // 1. 如果没定义过 ENTITY_H
-#define ENTITY_H  // 2. 那就定义它 (防止被重复包含)
+#pragma once
 
 #include "Config.h"
 #include "raylib.h"
@@ -37,4 +36,3 @@ public:
         }
     }
 };
-#endif

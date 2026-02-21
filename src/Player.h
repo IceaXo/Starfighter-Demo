@@ -1,13 +1,15 @@
-#ifndef PLAYER_H
-#define PLAYER_H
+#pragma once
 
 #include "raylib.h"
 #include "Entity.h"
 #include "Bullet.h" // 玩家需要用到子弹
+#include "Enemy.h"
 #include <vector>
+
 
 class Player : public Entity {
 public:
+    using Entity::Update;
     // 弹夹
     std::vector<Bullet> bullets;
 
@@ -19,14 +21,17 @@ public:
     int hp;                 // 当前血量
     float lastDamageTime;   // 上次受伤的时间点 (用于计算无敌帧)
 
+    // 【新增】杀戮状态机
+    int killStreak;
+    BulletType currentWeapon;
+
     // 构造函数声明
     Player(float startX, float startY);
 
     // 方法声明 (注意后面是分号 ;)
-    void Update() override;
+    void Update(std::vector<Enemy>& enemyPool);
     void Draw() override;
     // --- [新增] 受伤方法 ---
     // 传入伤害值，通常是 1
     void TakeDamage(int damage);
 };
-#endif

@@ -10,6 +10,10 @@ Player::Player(float startX, float startY) : Entity(startX, startY) {
     // [新增] 初始化状态
     hp = 5;
     lastDamageTime = -2.0f;    
+
+    killStreak = 0;
+
+    currentWeapon = BulletType::NORMAL;
     // --- [新增] 子弹对象池初始化 ---
     bullets.reserve(MAX_BULLETS);
     for(int i = 0; i < MAX_BULLETS; i++) {
@@ -20,14 +24,14 @@ Player::Player(float startX, float startY) : Entity(startX, startY) {
     }
 }
 
-void Player::Update()
+void Player::Update(std::vector<Enemy>& enemyPool)
 {
     if (IsKeyDown(KEY_A)) x -= speed;
     if (IsKeyDown(KEY_D)) x += speed;
     if (IsKeyDown(KEY_W)) y -= speed;
     if (IsKeyDown(KEY_S)) y += speed;
 
-
+    
     if (IsKeyPressed(KEY_SPACE)) {
         // 遍历弹夹，找一颗“死”的子弹
         for (auto&b:bullets){
@@ -35,13 +39,43 @@ void Player::Update()
                 b.active = true;
                 b.x = x;
                 b.y = y-30;
+                b.vx = 0.0f;
+                b.vy = -b.speed;
+
+                // 【核心 1】子弹继承玩家当前的武器状态
+                b.type = this->currentWeapon;
+
+                if(b.type == BulletType::HOMING){
+                    int best_index = -1;
+                    float min_dist_sq = 9999999.0f;
+
+                    for(size_t i=0;i<enemyPool.size();i++){
+                        if(enemyPool[i].active){
+                            float dx = enemyPool[i].x-this->x;
+                            float dy = enemyPool[i].y-this->y;
+                            float dist_dq = dx*dx+dy*dy;
+
+                            if (dist_dq<min_dist_sq) {
+                                min_dist_sq = dist_dq;
+                                best_index = i;
+                            }
+                        }
+                    }
+
+                    if(best_index!=-1){
+                        b.target_index = best_index;
+                        b.target_id = enemyPool[best_index].unique_id;
+                    }else{
+                        b.target_id = -1;
+                    }
+                }
                 break;
             }
         }
     }
     
     for(auto& b :bullets){
-        if(b.active) b.Update();
+        if(b.active) b.Update(enemyPool);
     }
 
     // 动态边界限制
