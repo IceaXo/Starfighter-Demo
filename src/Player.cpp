@@ -12,6 +12,8 @@ Player::Player(float startX, float startY) : Entity(startX, startY) {
     lastDamageTime = -2.0f;    
 
     killStreak = 0;
+    
+    historyIndex = 0;
 
     currentWeapon = BulletType::NORMAL;
     // --- [新增] 子弹对象池初始化 ---
@@ -83,6 +85,10 @@ void Player::Update(std::vector<Enemy>& enemyPool)
     if (x > GameConfig::SCREEN_WIDTH - radius) x = GameConfig::SCREEN_WIDTH - radius;
     if (y < radius) y = radius;
     if (y > GameConfig::SCREEN_HEIGHT - radius) y = GameConfig::SCREEN_HEIGHT - radius;
+
+    // 存入当前坐标
+    history[historyIndex%10] = {x,y};
+    historyIndex++;
 }
 
 void Player::TakeDamage(int damage)
@@ -98,12 +104,26 @@ void Player::TakeDamage(int damage)
     }
     
 }
-void Player::Draw(){
+void Player::Draw() {
+    BeginBlendMode(BLEND_ADDITIVE);
+
     if(GetTime()-lastDamageTime<0.5){
         // 让飞机闪烁：每隔 0.1 秒画一次，不画一次
-        if((int)(GetTime()*10)%2==0) Entity::Draw();
+        if((int)(GetTime()*10)%2==0) DrawTriangleLines({x,y-radius},{x-radius,y+radius},{x+radius,y+radius},color);
     }
-    else Entity::Draw();
+    else {
+        for (int i=0;i<10;i++){
+            Vector2 pastPos = history[i];
+            if (pastPos.x ==0&&pastPos.y ==0) continue;
+
+            // 算出一个 0.1 到 1.0 的透明度和大小比例
+            Color ghostColor = {SKYBLUE.r,SKYBLUE.g,SKYBLUE.b,100};
+            float ghostRadius = radius *0.8f;
+
+            DrawTriangleLines({pastPos.x,pastPos.y-ghostRadius},{pastPos.x-ghostRadius,pastPos.y+ghostRadius},{pastPos.x+ghostRadius,pastPos.y+ghostRadius},ghostColor);
+        }
+        DrawTriangleLines({x,y-radius},{x-radius,y+radius},{x+radius,y+radius},color);
+    }
     // [画子弹循环] - 写法二：高效引用法 (C++11)
     // auto& b：b 是弹夹里子弹的【真身引用】。
     // : bullets：遍历 bullets 容器。
@@ -112,4 +132,5 @@ void Player::Draw(){
     for (auto& b : bullets) {
         if (b.active) b.Draw();
     }
+    EndBlendMode();
 }

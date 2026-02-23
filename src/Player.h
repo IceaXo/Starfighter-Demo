@@ -21,6 +21,11 @@ public:
     int hp;                 // 当前血量
     float lastDamageTime;   // 上次受伤的时间点 (用于计算无敌帧)
 
+    // 记录飞机过去 10 帧的坐标
+    Vector2 history[10]; 
+    // 记录写到了哪一页
+    int historyIndex;
+    
     // 【新增】杀戮状态机
     int killStreak;
     BulletType currentWeapon;

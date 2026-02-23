@@ -26,4 +26,9 @@ public:
         y += speed; 
         if (y > GameConfig::SCREEN_HEIGHT+2*radius) active = false; // 飞出底部就标记死亡
     }
+    void Draw() override{
+        BeginBlendMode(BLEND_ADDITIVE);
+        DrawTriangleLines({x,y+radius},{x-radius,y-radius},{x+radius,y-radius},color);
+        EndBlendMode();
+    }
 };

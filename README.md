@@ -30,21 +30,27 @@
 
 ---
 
-### 🗺️ 下一步冲刺计划 (Next Steps & Advanced Features)
-> 经过前四个阶段的打磨，项目的基础架构已坚如磐石。接下来的冲刺，将全面展现“图形学”与“底层算法优化”的大厂核心竞争力。
+## 🗺️ 下一步冲刺计划 (Roadmap & Advanced Features)
+> 经过前四个阶段的打磨，项目的基础架构已坚如磐石。接下来的冲刺，将围绕**“表现力升维”**与**“大厂级底层优化”**双轨并进，全面展示图形学常识与 C++ 性能压榨能力。
 
-* **[重点 2] 碰撞算法降维打击 (Spatial Partitioning)**
-    * **目标**：打破目前子弹与敌人 $O(N \times M)$ 的双重循环暴力检测。
-    * **技术点**：实现空间网格划分 (Spatial Grid) 或 四叉树 (Quadtree)，将碰撞检测开销降至近似 $O(N+M)$，支撑千人同屏弹幕。
-* **[重点 3] GLSL 着色器编程 (Shaders & Post-Processing)**
-    * **目标**：摆脱 4399 视觉感，提升游戏画面张力。
-    * **技术点**：编写 Fragment Shader，结合 Raylib 的 `BeginShaderMode`，实现全屏泛光 (Bloom) 特效与 CRT 屏幕扭曲边缘效果。
-* **[重点 4] DOD 进阶架构重构 (Structure of Arrays)**
-    * **目标**：极致压榨 CPU 缓存性能。
-    * **技术点**：将现有的 `ParticleSystem`（数组套结构体 AoS）重构为纯平面的 SoA (Structure of Arrays) 内存布局，向面试官展示对 L1/L2 Cache Miss 的深刻理解。
-* **[重点 5] 贝塞尔曲线与镜头表现 (Bezier & Camera Shake)**
-    * **目标**：提升游戏“打击感”。
-    * **技术点**：为强力敌人引入三次贝塞尔曲线 (Cubic Bezier) 飞行轨迹；结合屏幕震动数学公式实现受击视觉反馈。
+### 阶段五：外功化境·霓虹流视觉升维 (Juice & Visuals) 🟡 [Next]
+* **目标**：在零美术资产前提下，通过纯代码与基础着色器，达成现代独立游戏级别的视觉冲击力。
+* **技术点**：
+    * **形变与残影 (Velocity-based Stretching)**：基于物理速度动态计算几何体拉伸，取代静态粒子。
+    * **打击感重塑 (Hit Stop & Camera Shake)**：运用顿帧与高频坐标偏移，在 C++ 逻辑层实现拳拳到肉的反馈。
+    * **光污染渲染 (Post-Processing)**：接入轻量级 GLSL Fragment Shader，结合 `BLEND_ADDITIVE` 实现全屏泛光 (Bloom) 特效。
+
+### 阶段六：内功破盾·碰撞算法降维打击 (Spatial Partitioning) 🔴 [Planning]
+* **痛点**：当前子弹与敌人的碰撞检测采用 $O(N \times M)$ 双重循环遍历，是制约同屏实体数量的绝对瓶颈。
+* **技术点**：
+    * 引入 **四叉树 (QuadTree)** 或 **空间网格划分 (Uniform Spatial Grid)** 数据结构。
+    * 将碰撞检测的运算开销从指数级降维至近似 $O(N+M)$，支撑千人同屏级别的弹幕运算。
+
+### 阶段七：元神出窍·面向数据设计重构 (DOD & Cache Optimization) 🟣 [Planning]
+* **目标**：从底层压榨 CPU 性能，向 3A 引擎底层的内存布局靠拢。
+* **技术点**：
+    * **SoA 架构 (Structure of Arrays)**：重构现有的 `ParticleSystem`，将传统的 AoS (Array of Structures) 内存布局，彻底平铺拆解为连续的内存块。
+    * **缓存命中率 (Cache Friendly)**：极致降低 L1/L2 Cache Miss，突破面向对象编程带来的性能损耗上限。
     
 ## 📅 开发日志 (Dev Log)
 ### 📅 [2026-2-22] 阶段四：化神·数据驱动与追踪武器系统
@@ -125,7 +131,3 @@
 
 ---
 
-## 🚧 待办事项 (Roadmap)
-1.  **[P0] 图形学特效**：实现粒子系统 (Particle System)，为爆炸添加碎片与光效。 已完成。
-2.  **[P1] 着色器编程**：编写 GLSL Shader 实现子弹泛光 (Bloom) 与背景滚动。
-3.  **[P2] 空间优化**：引入四叉树 (QuadTree) 优化大规模碰撞检测性能。

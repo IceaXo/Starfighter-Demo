@@ -28,6 +28,9 @@ void ParticleSystem::Emit(float startX,float startY,int count,Color baseColor){
             p.maxLife = (float)GetRandomValue(5,15)/10.0f;
             p.life = p.maxLife;
 
+            // 【新增】强制把线变细，展现锐利感
+            p.baseRadius = (float)GetRandomValue(1, 3);
+
             // ==========================================
             // [数学魔法：极坐标转笛卡尔坐标]
             // 面试官问：怎么让粒子360度随机炸开？
@@ -38,7 +41,7 @@ void ParticleSystem::Emit(float startX,float startY,int count,Color baseColor){
             float angle = (float)GetRandomValue(0,360)*(PI/180.0f);
 
             // 2. 随机一个爆炸力度 (速度大小)
-            float speed = (float)GetRandomValue(50,150);
+            float speed = (float)GetRandomValue(200,800);
 
             // 3. 极坐标转换公式 (初中数学)
             // vx = 速度 * cos(角度)
@@ -91,6 +94,19 @@ void ParticleSystem::Draw(){
     // 这会让重叠的粒子变得极其亮白，产生“高能量爆炸”的错觉
     BeginBlendMode(BLEND_ADDITIVE);
 
-    for (const auto&p:pool) if(p.active) DrawCircleV(Vector2{p.x, p.y}, p.radius, p.color);
+    for (const auto&p:pool) {
+        if(p.active) {
+            // DrawCircleV(Vector2{p.x, p.y}, p.radius, p.color);
+            // 起点：粒子当前的位置
+            Vector2 startPos = {p.x,p.y};
+
+            // 终点：粒子【上一瞬间】的位置。
+            // 用当前的坐标减去速度，乘以一个拉伸系数（比如 0.05f），速度越快，线越长！
+            Vector2 endPos = {p.x-p.vx*0.15f,p.y-p.vy*0.15f};
+
+            // 用 p.radius 作为线的粗细，画出这条残影
+            DrawLineEx(startPos,endPos,p.radius,p.color);
+        }
+    }
     EndBlendMode();
 }
