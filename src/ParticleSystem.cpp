@@ -56,17 +56,17 @@ void ParticleSystem::Emit(float startX,float startY,int count,Color baseColor){
 }
 
 // --- [数学核心：时间与插值] ---
-void ParticleSystem::Update(){
-    float deltaTime = GetFrameTime();// 距离上一帧过了多少秒 (通常是 0.016秒)
+void ParticleSystem::Update(float dt){
+
 
     for (auto&p:pool){
         if(p.active){
             // 1. 移动位置 (速度 * 时间)
-            p.x +=p.vx*deltaTime;
-            p.y +=p.vy*deltaTime;
+            p.x +=p.vx*dt;
+            p.y +=p.vy*dt;
 
             // 2. 扣减寿命
-            p.life -= deltaTime;
+            p.life -= dt;
 
             if (p.life<=0) p.active = false;
             else {

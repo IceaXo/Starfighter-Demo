@@ -16,9 +16,9 @@ namespace GameConfig {
     // --- 难度参数 ---
     constexpr int DIFFICULTY_STEP_RATE = 500;     
     constexpr int DIFFICULTY_STEP_SPEED = 200;
-    constexpr float ENEMY_BASE_SPEED = 2.0f; 
-    constexpr float ENEMY_SPEED_INCREMENT = 0.5f;
+    constexpr float ENEMY_BASE_SPEED = 4.0f; 
+    constexpr float ENEMY_SPEED_INCREMENT = 0.6f;
 
     // --- 星空配置 ---
-    constexpr int MAX_STARS = 1000;
+    constexpr int MAX_STARS = 800;
 }

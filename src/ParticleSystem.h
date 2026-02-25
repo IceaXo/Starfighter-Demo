@@ -34,7 +34,7 @@ public:
     void Emit(float startX,float startY,int count, Color baseColor);
 
     // [核心法术 2]：时间的流逝与状态更新
-    void Update();
+    void Update(float dt);
 
     // [核心法术 3]：渲染
     void Draw();

@@ -28,7 +28,11 @@ enum class GameState {
 
 int main(){
     InitWindow(GameConfig::SCREEN_WIDTH,GameConfig::SCREEN_HEIGHT,"Starfighter - Demo");
+    // 加载泛光着色器 (0表示默认顶点着色器，"bloom.fs" 是刚才写的片段着色器)
+    Shader bloomShader = LoadShader(0,"bloom.fs");
     SetTargetFPS(GameConfig::TARGET_FPS);
+
+    RenderTexture2D target =LoadRenderTexture(GameConfig::SCREEN_WIDTH,GameConfig::SCREEN_HEIGHT);
 
     Camera2D camera = {0};
     camera.target = Vector2{0.0f,0.0f};
@@ -84,141 +88,158 @@ int main(){
     int score = 0;    
     int frameCounter = 0;    // 计时器 (用于控制刷怪频率)
     int freezeFrames = 0;
+    // 节拍器：严格规定物理逻辑每 1/60 秒（约 0.0166秒）走一步
+    const float FIXED_STEP = 1.0f/60.0f;
+    // 时空沙漏：用来收集现实世界流逝的时间
+    float accumulator = 0.0f;
 
     // [新增] 当前游戏状态，默认为“正在玩”
     GameState currentState = GameState::PLAYING;
 
     while (!WindowShouldClose()){
-        if (currentState == GameState::PLAYING){
-            // --- [新增] A. 星空流转逻辑 ---
-            // 遍历所有星星
-            for (auto&s:stars){
-                s.y += s.speed;
+        // 获取这一帧现实过了多少秒，倒进沙漏
+        float frameTime = GetFrameTime();
+        // 【核心法术：封死上限】如果你卡了很久，我最多只认 0.25 秒！
+        if (frameTime>0.25f) frameTime = 0.25f;
+        accumulator += frameTime;
 
-                // 如果星星掉出了屏幕底部
-                if(s.y>GameConfig::SCREEN_HEIGHT){
-                    s.y = 0;
-                    s.x = (float)GetRandomValue(0,GameConfig::SCREEN_WIDTH);
-                }
-            }
-            if (shakeIntensity >0.0f){
-                // 产生 -10 到 +10 的随机偏移
-                camera.offset.x = (float)GetRandomValue(-shakeIntensity,shakeIntensity);
-                camera.offset.y = (float)GetRandomValue(-shakeIntensity,shakeIntensity);
-                // 震动极速衰减
-                shakeIntensity-=0.5f;
-                if (shakeIntensity <0.0f){
-                    shakeIntensity = 0.0f;
-                    camera.offset = Vector2{0.0f,0.0f};
-                }
-            }
-            if(freezeFrames > 0){
-                freezeFrames--;
-            }else{
-                    // --- 1. 逻辑更新 (Update) ---
-                myPlane.Update(enemies);
-                
-                // [新增] 粒子特效状态更新
-                ps.Update();
+        while (accumulator >= FIXED_STEP){
+            if (currentState == GameState::PLAYING){
+                // --- [新增] A. 星空流转逻辑 ---
+                // 遍历所有星星
+                for (auto&s:stars){
+                    s.y += s.speed;
 
-                // [新增] 胜负判定
-                if (myPlane.hp <=0) currentState = GameState::GAME_OVER;
-                if (score >=GameConfig::TARGET_SCORE) currentState = GameState::VICTORY;
-                
-                // --- B. 敌军生成 (Spawner) ---
-                frameCounter++;
-                
-                // --- 步骤 1: 计算当前的天道压力 (动态生成间隔) ---
-                // 基础是 60 帧(1秒)生成一次。
-                // 逻辑：基础间隔 - (当前分数 / 难度阶梯) * 5
-                int difficultyLevel = score/GameConfig::DIFFICULTY_STEP_RATE;
-                int currentSpawnRate = GameConfig::BASE_SPAWN_RATE - (difficultyLevel*5);
-                
-                // [韩立]: 这是一个“保底阵法”。
-                // 防止分数太高导致间隔变成 0 或负数。
-                // 限制最快只能 20 帧(约0.3秒)生成一个敌人，否则游戏会崩溃或无法通关。
-                if (currentSpawnRate<GameConfig::MIN_SPAWN_RATE) currentSpawnRate = GameConfig::MIN_SPAWN_RATE;
-                
-                // --- 步骤 2: 判断是否到了生成敌人的时刻 ---
-                // 只有当计数器(frameCounter) 超过了 计算出的间隔(currentSpawnRate) 时，才动手。
-                if (frameCounter>=currentSpawnRate){
-                    // [对象池复活逻辑]: 替代之前的 push_back
-                        // 遍历池子，找一个“死”的敌人把它变“活”
-                        for (auto& e:enemies){
-                            if(!e.active){
-                                e.active = true;
-                                e.unique_id = Enemy::next_id++;
-                                e.x = (float)GetRandomValue(20,GameConfig::SCREEN_WIDTH-20);
-                                e.y = -50;
-                                int speedLevel = score / GameConfig::DIFFICULTY_STEP_SPEED;
-                                e.speed = GameConfig::ENEMY_BASE_SPEED+speedLevel*GameConfig::ENEMY_SPEED_INCREMENT;
-                                break;
-                            }
-                        }
-                    frameCounter = 0;
-                }
-                for (auto &e:enemies)
-                {
-                    if(e.active){
-                        e.Update();
-                    // 遍历玩家弹夹里的每一颗子弹
-                    // auto& b : myPlane.bullets 意思是：拿出每一个子弹的真身(引用)
-                    for (auto& b : myPlane.bullets){
-                        // 如果这颗子弹也是活的
-                        if(b.active){
-                            // [核心法术]：检测 子弹的圆 和 敌人的圆 是否重叠
-                            // Vector2{x, y} 是把我们的坐标转换成 Raylib 需要的格式
-                            if(CheckCollisionCircles(Vector2{b.x,b.y},b.radius,Vector2{e.x,e.y},e.radius))
-                            {
-                            e.active=false;
-                            b.active=false;
-                            score +=GameConfig::SCORE_PER_KILL;
-                            myPlane.killStreak++;
-                            if(myPlane.killStreak>=5) {myPlane.currentWeapon = BulletType::HOMING;}
-
-                            // ==========================================
-                            // [新增法术：引爆粒子！]
-                            // 在敌人死亡的坐标，瞬间发射 30 个橙色粒子
-                            // ==========================================
-                            ps.Emit(e.x,e.y,30,ORANGE);
-
-                            //顿帧
-                            freezeFrames = 2;
-                            shakeIntensity = 5.0f;
-                            break;
-                        }
-                        }
-                        
+                    // 如果星星掉出了屏幕底部
+                    if(s.y>GameConfig::SCREEN_HEIGHT){
+                        s.y = 0;
+                        s.x = (float)GetRandomValue(0,GameConfig::SCREEN_WIDTH);
                     }
-                    // 2. [新增] 敌人撞玩家 (同归于尽)
-                    // CheckCollisionCircles: Raylib 自带的圆形碰撞检测
-                        if(e.active){
-                            if(CheckCollisionCircles(Vector2{myPlane.x,myPlane.y},myPlane.radius,Vector2{e.x,e.y},e.radius)){
-                                e.active = false;
-                                myPlane.TakeDamage(1);
-                                myPlane.killStreak = 0;
-                                myPlane.currentWeapon = BulletType::NORMAL;
+                }
+                if (shakeIntensity >0.0f){
+                    // 产生 -10 到 +10 的随机偏移
+                    camera.offset.x = (float)GetRandomValue(-shakeIntensity,shakeIntensity);
+                    camera.offset.y = (float)GetRandomValue(-shakeIntensity,shakeIntensity);
+                    // 震动极速衰减
+                    shakeIntensity-=0.5f;
+                    if (shakeIntensity <0.0f){
+                        shakeIntensity = 0.0f;
+                        camera.offset = Vector2{0.0f,0.0f};
+                    }
+                }
+                if(freezeFrames > 0){
+                    freezeFrames--;
+                }else{
+                        // --- 1. 逻辑更新 (Update) ---
+                    myPlane.Update(enemies);
+                    
+                    // [新增] 粒子特效状态更新
+                    ps.Update(FIXED_STEP);
 
-                                // [新增法术：玉石俱焚的爆炸！]
-                                // 敌人炸出橙色火花，玩家受击炸出蓝色装甲碎片
+                    // [新增] 胜负判定
+                    if (myPlane.hp <=0) currentState = GameState::GAME_OVER;
+                    if (score >=GameConfig::TARGET_SCORE) currentState = GameState::VICTORY;
+                    
+                    // --- B. 敌军生成 (Spawner) ---
+                    frameCounter++;
+                    
+                    // --- 步骤 1: 计算当前的天道压力 (动态生成间隔) ---
+                    // 基础是 60 帧(1秒)生成一次。
+                    // 逻辑：基础间隔 - (当前分数 / 难度阶梯) * 5
+                    int difficultyLevel = score/GameConfig::DIFFICULTY_STEP_RATE;
+                    int currentSpawnRate = GameConfig::BASE_SPAWN_RATE - (difficultyLevel*5);
+                    
+                    // [韩立]: 这是一个“保底阵法”。
+                    // 防止分数太高导致间隔变成 0 或负数。
+                    // 限制最快只能 20 帧(约0.3秒)生成一个敌人，否则游戏会崩溃或无法通关。
+                    if (currentSpawnRate<GameConfig::MIN_SPAWN_RATE) currentSpawnRate = GameConfig::MIN_SPAWN_RATE;
+                    
+                    // --- 步骤 2: 判断是否到了生成敌人的时刻 ---
+                    // 只有当计数器(frameCounter) 超过了 计算出的间隔(currentSpawnRate) 时，才动手。
+                    if (frameCounter>=currentSpawnRate){
+                        // [对象池复活逻辑]: 替代之前的 push_back
+                            // 遍历池子，找一个“死”的敌人把它变“活”
+                            for (auto& e:enemies){
+                                if(!e.active){
+                                    e.active = true;
+                                    e.unique_id = Enemy::next_id++;
+                                    e.x = (float)GetRandomValue(20,GameConfig::SCREEN_WIDTH-20);
+                                    e.y = -50;
+                                    int speedLevel = score / GameConfig::DIFFICULTY_STEP_SPEED;
+                                    e.speed = GameConfig::ENEMY_BASE_SPEED+speedLevel*GameConfig::ENEMY_SPEED_INCREMENT;
+                                    break;
+                                }
+                            }
+                        frameCounter = 0;
+                    }
+                    for (auto &e:enemies)
+                    {
+                        if(e.active){
+                            e.Update();
+                        // 遍历玩家弹夹里的每一颗子弹
+                        // auto& b : myPlane.bullets 意思是：拿出每一个子弹的真身(引用)
+                        for (auto& b : myPlane.bullets){
+                            // 如果这颗子弹也是活的
+                            if(b.active){
+                                // [核心法术]：检测 子弹的圆 和 敌人的圆 是否重叠
+                                // Vector2{x, y} 是把我们的坐标转换成 Raylib 需要的格式
+                                if(CheckCollisionCircles(Vector2{b.x,b.y},b.radius,Vector2{e.x,e.y},e.radius))
+                                {
+                                e.active=false;
+                                b.active=false;
+                                score +=GameConfig::SCORE_PER_KILL;
+                                myPlane.killStreak++;
+                                if(myPlane.killStreak>=5) {myPlane.currentWeapon = BulletType::HOMING;}
+
+                                // ==========================================
+                                // [新增法术：引爆粒子！]
+                                // 在敌人死亡的坐标，瞬间发射 30 个橙色粒子
+                                // ==========================================
                                 ps.Emit(e.x,e.y,30,ORANGE);
-                                ps.Emit(myPlane.x,myPlane.y,15,SKYBLUE);
 
                                 //顿帧
-                                freezeFrames = 3;
-                                shakeIntensity = 10.0f;
+                                freezeFrames = 2;
+                                shakeIntensity = 5.0f;
+                                break;
+                            }
+                            }
+                            
+                        }
+                        // 2. [新增] 敌人撞玩家 (同归于尽)
+                        // CheckCollisionCircles: Raylib 自带的圆形碰撞检测
+                            if(e.active){
+                                if(CheckCollisionCircles(Vector2{myPlane.x,myPlane.y},myPlane.radius,Vector2{e.x,e.y},e.radius)){
+                                    e.active = false;
+                                    myPlane.TakeDamage(1);
+                                    myPlane.killStreak = 0;
+                                    myPlane.currentWeapon = BulletType::NORMAL;
+
+                                    // [新增法术：玉石俱焚的爆炸！]
+                                    // 敌人炸出橙色火花，玩家受击炸出蓝色装甲碎片
+                                    ps.Emit(e.x,e.y,30,ORANGE);
+                                    ps.Emit(myPlane.x,myPlane.y,15,SKYBLUE);
+
+                                    //顿帧
+                                    freezeFrames = 3;
+                                    shakeIntensity = 10.0f;
+                                }
                             }
                         }
                     }
                 }
+            
             }
-        
+            accumulator -= FIXED_STEP;
         }
         // 如果状态是 GAME_OVER 或 VICTORY，这里什么都不做，逻辑冻结。
-        // --- 2. 画面渲染 (Draw) ---
-        BeginDrawing();
+
+
+        BeginTextureMode(target);
+
         // 用黑色清空背景
         ClearBackground(BLACK);
+
+        
         // 【开启摄像机模式】
         BeginMode2D(camera);
 
@@ -270,8 +291,25 @@ int main(){
             int scoreWidth = MeasureText(scoreText, 20);
             DrawText(scoreText, GameConfig::SCREEN_WIDTH / 2 - scoreWidth / 2, GameConfig::SCREEN_HEIGHT / 2 + 20, 20, RAYWHITE);
         }
+
+        EndTextureMode();
+
+        Rectangle sourseRec = {0.0f,0.0f,(float)target.texture.width,(float)-target.texture.height};
+        Vector2 destPos = {0.0f,0.0f};
+
+        BeginDrawing();
+        ClearBackground(BLACK);
+
+        // 【开启魔法滤镜】
+        BeginShaderMode(bloomShader);
+
+        // 画出被滤镜处理过的隐形画布
+        DrawTextureRec(target.texture,sourseRec,destPos,WHITE);
+
+        EndShaderMode();
         
         EndDrawing();
+        
     }
     CloseWindow();
 
