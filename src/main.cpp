@@ -5,6 +5,7 @@
 #include "Enemy.h"
 #include "ParticleSystem.h"
 #include "Config.h"
+#include "QuadTree.h"
 
 #include <vector>
 #include <string> // [韩立批注]: 为了方便显示分数文字
@@ -31,6 +32,8 @@ int main(){
     // 加载泛光着色器 (0表示默认顶点着色器，"bloom.fs" 是刚才写的片段着色器)
     Shader bloomShader = LoadShader(0,"bloom.fs");
     SetTargetFPS(GameConfig::TARGET_FPS);
+
+    Boundary boundary = {GameConfig::SCREEN_WIDTH/2.0f,GameConfig::SCREEN_HEIGHT/2.0f,GameConfig::SCREEN_WIDTH/2.0f,GameConfig::SCREEN_HEIGHT/2.0f};
 
     RenderTexture2D target =LoadRenderTexture(GameConfig::SCREEN_WIDTH,GameConfig::SCREEN_HEIGHT);
 
@@ -172,62 +175,72 @@ int main(){
                             }
                         frameCounter = 0;
                     }
+                    QuadTree qt(boundary,4);
                     for (auto &e:enemies)
                     {
                         if(e.active){
                             e.Update();
-                        // 遍历玩家弹夹里的每一颗子弹
-                        // auto& b : myPlane.bullets 意思是：拿出每一个子弹的真身(引用)
-                        for (auto& b : myPlane.bullets){
-                            // 如果这颗子弹也是活的
-                            if(b.active){
+                            qt.insert(&e);
+                        }
+                    }
+
+                    // 遍历玩家弹夹里的每一颗子弹
+                    // auto& b : myPlane.bullets 意思是：拿出每一个子弹的真身(引用)
+                    for (auto& b : myPlane.bullets){
+
+                        // 如果这颗子弹也是活的
+                        if(b.active){
+                            Boundary searchRange = {b.x,b.y,35.0f,35.0f};
+
+                            std::vector<Enemy*> suspects = qt.query(searchRange);
+                            for (Enemy* e:suspects){
                                 // [核心法术]：检测 子弹的圆 和 敌人的圆 是否重叠
                                 // Vector2{x, y} 是把我们的坐标转换成 Raylib 需要的格式
-                                if(CheckCollisionCircles(Vector2{b.x,b.y},b.radius,Vector2{e.x,e.y},e.radius))
+                                if(CheckCollisionCircles(Vector2{b.x,b.y},b.radius,Vector2{e->x,e->y},e->radius))
                                 {
-                                e.active=false;
-                                b.active=false;
-                                score +=GameConfig::SCORE_PER_KILL;
-                                myPlane.killStreak++;
-                                if(myPlane.killStreak>=5) {myPlane.currentWeapon = BulletType::HOMING;}
-
-                                // ==========================================
-                                // [新增法术：引爆粒子！]
-                                // 在敌人死亡的坐标，瞬间发射 30 个橙色粒子
-                                // ==========================================
-                                ps.Emit(e.x,e.y,30,ORANGE);
-
-                                //顿帧
-                                freezeFrames = 2;
-                                shakeIntensity = 5.0f;
-                                break;
-                            }
-                            }
-                            
-                        }
-                        // 2. [新增] 敌人撞玩家 (同归于尽)
-                        // CheckCollisionCircles: Raylib 自带的圆形碰撞检测
-                            if(e.active){
-                                if(CheckCollisionCircles(Vector2{myPlane.x,myPlane.y},myPlane.radius,Vector2{e.x,e.y},e.radius)){
-                                    e.active = false;
-                                    myPlane.TakeDamage(1);
-                                    myPlane.killStreak = 0;
-                                    myPlane.currentWeapon = BulletType::NORMAL;
-
-                                    // [新增法术：玉石俱焚的爆炸！]
-                                    // 敌人炸出橙色火花，玩家受击炸出蓝色装甲碎片
-                                    ps.Emit(e.x,e.y,30,ORANGE);
-                                    ps.Emit(myPlane.x,myPlane.y,15,SKYBLUE);
+                                    e->active=false;
+                                    b.active=false;
+                                    score +=GameConfig::SCORE_PER_KILL;
+                                    myPlane.killStreak++;
+                                    if(myPlane.killStreak>=5) {
+                                        myPlane.currentWeapon = BulletType::HOMING;
+                                        myPlane.speed+=0.3f;
+                                    }
+                                    // ==========================================
+                                    // [新增法术：引爆粒子！]
+                                    // 在敌人死亡的坐标，瞬间发射 30 个橙色粒子
+                                    // ==========================================
+                                    ps.Emit(e->x,e->y,30,ORANGE);
 
                                     //顿帧
-                                    freezeFrames = 3;
-                                    shakeIntensity = 10.0f;
+                                    freezeFrames = 2;
+                                    shakeIntensity = 5.0f;
+                                    break;
                                 }
+                            }
+                        }
+                        Boundary playerRange = {myPlane.x,myPlane.y,50.0f,50.0f};
+                        std::vector<Enemy*> playersuspects = qt.query(playerRange);
+                        for (Enemy* e:playersuspects){
+                            if(e->active&&CheckCollisionCircles(Vector2{myPlane.x,myPlane.y},myPlane.radius,Vector2{e->x,e->y},e->radius)){
+                                e->active = false;
+                                myPlane.TakeDamage(1);
+                                myPlane.killStreak = 0;
+                                myPlane.speed-=0.8f;
+                                myPlane.currentWeapon = BulletType::NORMAL;
+
+                                // [新增法术：玉石俱焚的爆炸！]
+                                // 敌人炸出橙色火花，玩家受击炸出蓝色装甲碎片
+                                ps.Emit(e->x,e->y,30,ORANGE);
+                                ps.Emit(myPlane.x,myPlane.y,15,SKYBLUE);
+
+                                //顿帧
+                                freezeFrames = 3;
+                                shakeIntensity = 10.0f;
                             }
                         }
                     }
                 }
-            
             }
             accumulator -= FIXED_STEP;
         }

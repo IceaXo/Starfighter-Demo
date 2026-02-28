@@ -53,6 +53,21 @@
     * **缓存命中率 (Cache Friendly)**：极致降低 L1/L2 Cache Miss，突破面向对象编程带来的性能损耗上限。
     
 ## 📅 开发日志 (Dev Log)
+### 📅 [2026-3-1] 阶段六：内功破盾·四叉树空间划分 (QuadTree Spatial Partitioning)
+> **摘要**：重写了游戏底层的物理碰撞引擎。引入四叉树数据结构，彻底斩断了传统的双重 `for` 循环遍历，完成了 $O(N \times M)$ 向近似 $O(N \log M)$ 的降维打击。
+
+#### ✅ 今日完成 (Completed)
+1.  **四叉树核心大阵 (QuadTree & AABB)**：
+    - 实装 `Boundary` 结构体，利用 AABB (Axis-Aligned Bounding Box) 逆向排除法进行极其廉价的正方形相交/包含判定。
+    - 实装 `QuadTree` 的 `insert` 与 `subdivide` (动态十字裂变) 逻辑，将全屏 100 个敌人动态隔离至容量为 4 的微小扇区。
+2.  **物理管线重构 (Physics Pipeline)**：
+    - 重构 `main.cpp` 的物理更新生命周期：每帧重新建树 -> 全员装箱更新 -> 精准索敌 (Query)。
+    - 子弹与玩家战机通过生成自定义搜索网 (`searchRange`)，直接从四叉树获取极小范围的嫌疑人名单，极大降低了圆心距离计算 `CheckCollisionCircles` 的调用频次。
+3.  **工程安全与内存管理 (C++ RAII & Memory Safety)**：
+    - 深刻贯彻 RAII 机制，利用 `~QuadTree()` 析构函数自动释放子节点堆内存，杜绝内存泄漏。
+    - 运用 `vector::insert` 与迭代器 `begin()/end()` 进行底层内存的高效批量拷贝。
+    - 修复了因为 `size_t` 与 `int` 混用可能引发的无符号整数溢出灾难，坚持了严格的 `-Wsign-compare` 零警告标准。
+    
 ### 📅 [2026-2-25] 阶段五大圆满：外功化境·离屏渲染与光污染着色器
 > **摘要**：突破 CPU 渲染管线限制，全面拥抱 GPU。实装 FBO 离屏渲染与 GLSL 后处理着色器，达成工业级 Bloom 泛光特效，外功彻底化境。
 
