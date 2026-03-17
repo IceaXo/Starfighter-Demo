@@ -1,4 +1,4 @@
-g++ src/main.cpp src/Player.cpp src/ParticleSystem.cpp -o Starfighter.exe -O1 -Wall -std=c++11 -I C:/raylib/include -L C:/raylib/lib -lraylib -lopengl32 -lgdi32 -lwinmm
+g++ src/main.cpp src/Player.cpp src/ParticleSystem.cpp src/Game.cpp -o Starfighter.exe -O1 -Wall -std=c++11 -I include -I C:/raylib/include -L C:/raylib/lib -lraylib -lopengl32 -lgdi32 -lwinmm
 
 ./Starfighter.exe
 
