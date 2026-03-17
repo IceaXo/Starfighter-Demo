@@ -102,7 +102,7 @@ void ParticleSystem::Draw(){
 
             // 终点：粒子【上一瞬间】的位置。
             // 用当前的坐标减去速度，乘以一个拉伸系数（比如 0.05f），速度越快，线越长！
-            Vector2 endPos = {p.x-p.vx*0.15f,p.y-p.vy*0.15f};
+            Vector2 endPos = {p.x-p.vx*0.25f,p.y-p.vy*0.25f};
 
             // 用 p.radius 作为线的粗细，画出这条残影
             DrawLineEx(startPos,endPos,p.radius,p.color);

@@ -3,7 +3,7 @@
 #include "GameManager.h"
 
 Game::Game():myPlane(GameConfig::SCREEN_WIDTH/2.0f,GameConfig::SCREEN_HEIGHT-100),ps(500){
-    currentState = GameState::PLAYING;
+    currentState = GameState::TITLE;
     boundary = {GameConfig::SCREEN_WIDTH/2.0f,GameConfig::SCREEN_HEIGHT/2.0f,GameConfig::SCREEN_WIDTH/2.0f,GameConfig::SCREEN_HEIGHT/2.0f};
     
     stars.resize(GameConfig::MAX_STARS);
@@ -32,6 +32,17 @@ Game::Game():myPlane(GameConfig::SCREEN_WIDTH/2.0f,GameConfig::SCREEN_HEIGHT-100
 Game::~Game(){}
 
 void Game::Update(float dt) {
+    if (currentState == GameState::TITLE) {
+        if (IsKeyPressed(KEY_SPACE)) currentState = GameState::PLAYING;
+        UpdateStars();
+        return;
+    }
+    if (currentState == GameState::GAME_OVER || currentState == GameState::VICTORY) {
+        if (IsKeyPressed(KEY_ENTER)) {
+            Reset(); // 调用重置大法！
+        }
+        return;
+    }
     if (currentState != GameState::PLAYING) return;
     // --- 1. 逻辑更新 (Update) ---
     UpdateStars();
@@ -79,7 +90,7 @@ void Game::CheckCollisions() {
         // 如果这颗子弹也是活的
         if (!b.active) continue;
 
-        Boundary searchRange = {b.x, b.y, 35.0f, 35.0f};
+        Boundary searchRange = {b.x, b.y, 50.0f, 50.0f};
         std::vector<Enemy *> suspects = qt.query(searchRange);
         for (Enemy *e : suspects){
             // [核心法术]：检测 子弹的圆 和 敌人的圆 是否重叠
@@ -87,7 +98,7 @@ void Game::CheckCollisions() {
             if (CheckCollisionCircles(Vector2{b.x, b.y}, b.radius, Vector2{e->x, e->y}, e->radius)){
                 e->active = false;
                 b.active = false;
-                GM.score += GameConfig::SCORE_PER_KILL;
+                GM.AddScore(GameConfig::SCORE_PER_KILL);
                 myPlane.killStreak++;
                 if (myPlane.killStreak >= 5){
                     myPlane.currentWeapon = BulletType::HOMING;
@@ -100,7 +111,7 @@ void Game::CheckCollisions() {
             }
         }
     }
-    Boundary playerRange = {myPlane.x, myPlane.y, 50.0f, 50.0f};
+    Boundary playerRange = {myPlane.x, myPlane.y, 60.0f, 60.0f};
     std::vector<Enemy *> playersuspects = qt.query(playerRange);
     for (Enemy *e : playersuspects){
         if (e->active && CheckCollisionCircles(Vector2{myPlane.x, myPlane.y}, myPlane.radius, Vector2{e->x, e->y}, e->radius)){
@@ -108,21 +119,31 @@ void Game::CheckCollisions() {
             myPlane.TakeDamage(1);
             myPlane.killStreak = 0;
             myPlane.speed -= 0.8f;
+            if (myPlane.speed<8.0f) myPlane.speed=8.0f;
             myPlane.currentWeapon = BulletType::NORMAL;
 
             // [新增法术：玉石俱焚的爆炸！]
             // 敌人炸出橙色火花，玩家受击炸出蓝色装甲碎片
-            ps.Emit(e->x, e->y, 30, ORANGE);
-            ps.Emit(myPlane.x, myPlane.y, 15, SKYBLUE);
+            ps.Emit(e->x, e->y, 50, ORANGE);
+            ps.Emit(myPlane.x, myPlane.y, 25, SKYBLUE);
 
             // 顿帧
-            GM.TriggerShake(10.0,3);
+            GM.TriggerShake(10.0f,3);
         }
     }
 }
 
 void Game::DrawUI() {
     auto& GM = GameManager::GetInstance();
+    if (currentState == GameState::TITLE) {
+        const char *title = "STARFIGHTER: VOID VANGUARD";
+        int titleWidth = MeasureText(title, 50);
+        DrawText(title, GameConfig::SCREEN_WIDTH / 2 - titleWidth / 2, GameConfig::SCREEN_HEIGHT / 2 - 60, 50, RAYWHITE);
+        
+        const char *subTitle = "- PRESS SPACE TO START -";
+        int subTitleWidth = MeasureText(subTitle, 20);
+        DrawText(subTitle, GameConfig::SCREEN_WIDTH / 2 - subTitleWidth / 2, GameConfig::SCREEN_HEIGHT / 2 + 20, 20, GRAY);
+    }
     if (currentState == GameState::PLAYING) {
         DrawText(TextFormat("SCORE: %04d", GM.score), 20, 20, 30, YELLOW);
         DrawText(TextFormat("HP: %d", myPlane.hp), 20, 60, 30, RED); // myPlane 是 Game 的私有财产，它自己可以随便用！
@@ -136,6 +157,10 @@ void Game::DrawUI() {
         const char *scoreText = TextFormat("Final Score: %d", GM.score);
         int scoreWidth = MeasureText(scoreText, 20);
         DrawText(scoreText, GameConfig::SCREEN_WIDTH / 2 - scoreWidth / 2, GameConfig::SCREEN_HEIGHT / 2 + 20, 20, RAYWHITE);
+
+        const char *subTitle = "- PRESS SPACE TO START -";
+        int subTitleWidth = MeasureText(subTitle, 20);
+        DrawText(subTitle, GameConfig::SCREEN_WIDTH / 2 - subTitleWidth / 2, GameConfig::SCREEN_HEIGHT / 2 + 100, 20, GRAY);
     } 
     else if (currentState == GameState::VICTORY) {
         const char *title = "VICTORY!";
@@ -144,6 +169,26 @@ void Game::DrawUI() {
 
         const char *scoreText = TextFormat("Final Score: %d", GM.score);
         int scoreWidth = MeasureText(scoreText, 20);
-        DrawText(scoreText, GameConfig::SCREEN_WIDTH / 2 - scoreWidth / 2, GameConfig::SCREEN_HEIGHT / 2 + 20, 20, RAYWHITE);
+        DrawText(scoreText, GameConfig::SCREEN_WIDTH / 2 - scoreWidth / 2, GameConfig::SCREEN_HEIGHT / 2 + 100, 20, RAYWHITE);
     }
+}
+
+void Game::Reset() {
+    auto& GM = GameManager::GetInstance();
+    GM.Reset();
+
+    // 重置玩家
+    myPlane.x = GameConfig::SCREEN_WIDTH / 2.0f;
+    myPlane.y = GameConfig::SCREEN_HEIGHT - 100;
+    myPlane.hp = 5;
+    myPlane.killStreak = 0;
+    myPlane.currentWeapon = BulletType::NORMAL;
+    myPlane.speed = 8.0f;
+    for (auto& b : myPlane.bullets) b.active = false; // 清空弹夹
+    myPlane.historyIndex = 0; // 清空残影
+
+    for (auto& e : enemies) e.active = false; // 直接全部标记为死亡，对象池瞬间清空！
+    spawner = EnemySpawner(); // 重新雇佣一个新包工头，计时器归零
+
+    currentState = GameState::PLAYING;
 }

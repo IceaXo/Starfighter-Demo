@@ -131,4 +131,6 @@ public:
 
         return found;
     }
+    QuadTree(const QuadTree&) = delete;
+    QuadTree& operator=(const QuadTree&) = delete;
 };

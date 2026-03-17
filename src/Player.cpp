@@ -3,8 +3,8 @@
 
 // --- 构造函数实现 ---
 Player::Player(float startX, float startY) : Entity(startX, startY) {
-    speed = 5.0f;
-    radius = 25.0f;
+    speed = 8.0f;
+    radius = 40.0f;
     color = SKYBLUE;
 
     // [新增] 初始化状态

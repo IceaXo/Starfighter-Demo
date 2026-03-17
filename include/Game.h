@@ -15,6 +15,7 @@ struct Star{
 };
 
 enum class GameState {
+    TITLE,
     PLAYING,
     GAME_OVER,
     VICTORY
@@ -28,6 +29,7 @@ public:
     void Update(float dt);
     void Draw();
     void DrawUI();
+    void Reset();
 
 private:
     Player myPlane;

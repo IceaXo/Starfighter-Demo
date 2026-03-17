@@ -2,8 +2,8 @@
 #pragma once
 
 namespace GameConfig {
-    constexpr int SCREEN_WIDTH = 1280;
-    constexpr int SCREEN_HEIGHT = 720;
+    constexpr int SCREEN_WIDTH = 1920;
+    constexpr int SCREEN_HEIGHT = 1080;
     constexpr int TARGET_FPS = 60;
 
     // --- 游戏性参数 ---
@@ -20,5 +20,5 @@ namespace GameConfig {
     constexpr float ENEMY_SPEED_INCREMENT = 0.6f;
 
     // --- 星空配置 ---
-    constexpr int MAX_STARS = 800;
+    constexpr int MAX_STARS = 1200;
 }

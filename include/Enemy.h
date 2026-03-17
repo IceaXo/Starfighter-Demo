@@ -15,8 +15,8 @@ public:
     static unsigned int next_id;
     // 构造函数
     Enemy(float startX, float startY) : Entity(startX, startY) {
-        speed = 2.0f;   
-        radius = 20.0f; // 敌人的碰撞半径
+        speed = 3.0f;   
+        radius = 30.0f; // 敌人的碰撞半径
         color = RED;    // 敌人是红色的
         unique_id = 0;
     }
