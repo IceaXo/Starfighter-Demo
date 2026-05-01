@@ -30,6 +30,9 @@ public:
     int killStreak;
     BulletType currentWeapon;
 
+    // 枪口闪光计时器
+    float muzzleFlashTime;
+
     // 构造函数声明
     Player(float startX, float startY);
 

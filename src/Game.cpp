@@ -47,8 +47,15 @@ void Game::Update(float dt) {
     // --- 1. 逻辑更新 (Update) ---
     UpdateStars();
     myPlane.Update(enemies);
-    spawner.Update(enemies);     
+    spawner.Update(enemies);
     ps.Update(dt);
+
+    // 引擎尾迹: 从玩家双发喷口持续发射微量粒子
+    {
+        Color trailC = {0, 180, 240, 255};
+        ps.EmitTrail(myPlane.x - 6.5f, myPlane.y + 22.0f, 1, trailC, 120.0f);
+        ps.EmitTrail(myPlane.x + 6.5f, myPlane.y + 22.0f, 1, trailC, 120.0f);
+    }
 
     auto& GM = GameManager::GetInstance();
     if (myPlane.hp <=0) currentState = GameState::GAME_OVER;

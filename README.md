@@ -37,6 +37,20 @@
 
 ## 📅 开发日志 (Dev Log & Issue Tracking)
 
+### [2026-05-01] 星舰降世: AI 驱动的纯几何视觉革命 — Claude Code x DeepSeek V4 Pro 代工 (Geometric Starfighter Visual Overhaul)
+
+> 💡 **特别说明**: 以下全部 Feature 由搭载 **DeepSeek V4 Pro** 大语言模型的 **Claude Code** 框架独立设计并实施。人工零干预，仅提供"把画面做华丽"的自然语言指令。所有代码由 AI 从零架构、编写、编译通过。
+
+* **Feature (Effects.h 特效军械库)**：新建 `include/Effects.h` 纯头文件视觉工具链，封装 7 个可复用底层绘图原语 — 多层光晕 (`DrawGlow`)、动态引擎火焰 (`DrawEngineFlame`)、菱形几何体 (`DrawDiamond`/`DrawDiamondLines`)、星舰机身组装 (`DrawStarFighterBody`)、残影投射 (`DrawStarFighterGhost`)、武器光环 (`DrawWeaponAura`)、枪口闪光 (`DrawMuzzleFlash`)。全部基于 Raylib 原生 API 零依赖构建，单头文件即插即用。
+* **Feature (星翼战斗机 — Player 视觉重构)**：彻底推翻原始单三角形线框绘制。基于 `DrawTriangle`/`DrawCircleGradient`/`DrawLineEx` 原生 API，构建 7 层叠绘管线: (1) 双发脉动引擎光焰 → (2) 10 帧环形缓冲区几何残影 → (3) ALPHA 混合实体机身 (深蓝装甲+后掠翼) → (4) ADDITIVE 座舱辉光+翼尖红绿导航灯+喷口内壁高亮 → (5) 武器升级青色光环 → (6) 枪口瞬发白色闪光 → (7) 子弹集遍历。实现从简陋三角形到科幻几何星舰的蜕变。
+* **Feature (虚空撕裂者 — Enemy 视觉重构)**：推翻原始倒三角线框。实装 3 层菱形恶魔机体: 外圈暗红色 `DrawCircleGradient` 光污染扩散 + 四向尖刺 `DrawLineEx` 延伸 → ALPHA 混合实体菱形 (四 `DrawTriangle` 拼合+内部框线) → ADDITIVE 脉动白炽核心 (`sin` 时间函数驱动半径呼吸)。引入 3 种随机色相变体 (深红/暗橙/紫红)，每只敌机 `spawn` 时从颜色池分配，池内复用则重置色相。
+* **Feature (能量弹与追踪弹 — Bullet 视觉重设计)**：`NORMAL` 子弹废弃黄色矩形，改用 `DrawEllipse` 构建纵向拉长能量弹+外层 `DrawCircleGradient` 光晕+头部白色高亮椭圆叠层。`HOMING` 追踪弹采用紫红 (#ff44ff) 配色，实装旋转矩形主体 (`DrawRectanglePro` + `GetTime()` 角速度驱动) + 三层递减拖尾复制体 + 外围 `sin` 脉冲光环，与普通弹形成鲜明视觉层级区分。
+* **Feature (粒子阵法多形进化 — ParticleSystem 增强)**：粒子结构体新增 `ParticleShape` 枚举 (LINE/CIRCLE/SQUARE/SPARK)。爆炸发射逻辑改为 60%/25%/10%/5% 概率分布混合发射，各形状差异化速度与寿命倍率。`Draw()` 按形状分派: LINE 保持速度向量拉伸线、CIRCLE 使用 `DrawCircleGradient` 光球、SQUARE 使用 `DrawRectanglePro` 旋转方片、SPARK 使用十字 `DrawLine` 闪烁。新增 `EmitTrail()` 轻量级持续发射接口，专供引擎尾迹调用。
+* **Feature (引擎尾迹与枪口闪光 — Game 层接入)**：`Game::Update()` 固定步长内从玩家双发喷口坐标 (`x±6.5f, y+22.0f`) 每帧调用 `EmitTrail` 发射 2 枚短命 (0.2~0.5s) 青色微粒子，形成持续拖尾。`Player::Update()` 开火瞬间记录 `muzzleFlashTime` 时间戳，`Draw()` 中检查 `delta < 0.08s` 触发白色→黄色渐变枪口闪光。`muzzleFlashTime` 初始化置 -99.0f 防止首帧误触发。
+
+**变更统计**: 新建 1 文件 (`Effects.h` 147 行)，修改 6 文件，累计增/改约 500+ 行 C++。编译命令零变化，`-Wall` 零警告通过。
+
+
 ### [2026-03-17] 架构解耦与设计模式落地 (Facade / Singleton)
 * **Feature**: 全面引入外观模式 (Facade)，重构臃肿的 `main.cpp` 上帝类，将物理管线、特效分发全面内聚至 `Game` 类；利用 `GameState` 状态机无缝实现 Title 界面与 `Reset()` 重启闭环。
 * **Feature**: 引入 Meyers Singleton 模式构建 `GameManager` 统管全局分数与摄像机震动；引入工厂模式 `EnemySpawner` 剥离刷怪与难度算法。

@@ -1,5 +1,6 @@
 #include "Player.h"
 #include "Config.h"
+#include "Effects.h"
 
 // --- 构造函数实现 ---
 Player::Player(float startX, float startY) : Entity(startX, startY) {
@@ -7,20 +8,17 @@ Player::Player(float startX, float startY) : Entity(startX, startY) {
     radius = 40.0f;
     color = SKYBLUE;
 
-    // [新增] 初始化状态
     hp = 5;
-    lastDamageTime = -2.0f;    
+    lastDamageTime = -2.0f;
 
     killStreak = 0;
-    
     historyIndex = 0;
+    muzzleFlashTime = -99.0f;
 
     currentWeapon = BulletType::NORMAL;
-    // --- [新增] 子弹对象池初始化 ---
     bullets.reserve(MAX_BULLETS);
-    for(int i = 0; i < MAX_BULLETS; i++) {
-        // 创建死子弹填满弹夹
-        Bullet b(-100, -100); 
+    for (int i = 0; i < MAX_BULLETS; i++) {
+        Bullet b(-100, -100);
         b.active = false;
         bullets.push_back(b);
     }
@@ -35,7 +33,7 @@ void Player::Update(std::vector<Enemy>& enemyPool)
 
     
     if (IsKeyPressed(KEY_SPACE)) {
-        // 遍历弹夹，找一颗“死”的子弹
+        // 遍历弹夹，找一颗”死”的子弹
         for (auto&b:bullets){
             if(!b.active){
                 b.active = true;
@@ -71,6 +69,7 @@ void Player::Update(std::vector<Enemy>& enemyPool)
                         b.target_id = -1;
                     }
                 }
+                muzzleFlashTime = (float)GetTime();
                 break;
             }
         }
@@ -105,32 +104,79 @@ void Player::TakeDamage(int damage)
     
 }
 void Player::Draw() {
+    float time = (float)GetTime();
+    bool invincible = (time - lastDamageTime < 0.5f);
+    bool flashOn = invincible ? ((int)(time * 10) % 2 == 0) : true;
+    bool hasAura = (killStreak >= 5);
+
+    Color bodyC   = { 26,  48,  80, 255};  // 深蓝灰机身
+    Color wingC   = { 37,  72, 112, 255};  // 略浅机翼
+    Color accentC = {  0, 200, 255, 255};  // 青色饰线
+    Color flameC  = {  0, 180, 240, 255};  // 引擎焰色
+
+    // ---- 1. 引擎火焰 (ADDITIVE, 在机身之后绘制所以先画) ----
     BeginBlendMode(BLEND_ADDITIVE);
+    FX::DrawEngineFlame(x - 6.5f, y + 22.0f, 10.0f, time,       flameC);
+    FX::DrawEngineFlame(x + 6.5f, y + 22.0f, 10.0f, time + 0.3f, flameC);
+    EndBlendMode();
 
-    if(GetTime()-lastDamageTime<0.5){
-        // 让飞机闪烁：每隔 0.1 秒画一次，不画一次
-        if((int)(GetTime()*10)%2==0) DrawTriangleLines({x,y-radius},{x-radius,y+radius},{x+radius,y+radius},color);
+    // ---- 2. 残影 (ADDITIVE) ----
+    BeginBlendMode(BLEND_ADDITIVE);
+    for (int i = 0; i < 10; i++) {
+        Vector2 pastPos = history[i];
+        if (pastPos.x == 0 && pastPos.y == 0) continue;
+        float alpha = (float)(10 - i) / 10.0f;
+        FX::DrawStarFighterGhost(pastPos.x, pastPos.y, alpha, accentC);
     }
-    else {
-        for (int i=0;i<10;i++){
-            Vector2 pastPos = history[i];
-            if (pastPos.x ==0&&pastPos.y ==0) continue;
+    EndBlendMode();
 
-            // 算出一个 0.1 到 1.0 的透明度和大小比例
-            Color ghostColor = {SKYBLUE.r,SKYBLUE.g,SKYBLUE.b,100};
-            float ghostRadius = radius *0.8f;
+    // ---- 3. 机身主体 (ALPHA — 实体几何) ----
+    if (flashOn) {
+        BeginBlendMode(BLEND_ALPHA);
+        FX::DrawStarFighterBody(x, y, bodyC, wingC, accentC);
+        EndBlendMode();
 
-            DrawTriangleLines({pastPos.x,pastPos.y-ghostRadius},{pastPos.x-ghostRadius,pastPos.y+ghostRadius},{pastPos.x+ghostRadius,pastPos.y+ghostRadius},ghostColor);
+        // ---- 4. 座舱 + 翼尖灯 + 喷口高亮 (ADDITIVE) ----
+        BeginBlendMode(BLEND_ADDITIVE);
+        {
+            // 座舱
+            DrawCircleGradient((int)x, (int)(y - 10.0f), 6.0f,
+                {220, 240, 255, 200}, {0, 80, 160, 0});
+            DrawCircle((int)x, (int)(y - 10.0f), 2.5f,
+                {240, 248, 255, 240});
+
+            // 翼尖导航灯: 左红 / 右绿
+            DrawCircle((int)(x - 27.0f), (int)(y + 11.0f), 2.5f,
+                {255, 60, 40, 200});
+            DrawCircle((int)(x + 27.0f), (int)(y + 11.0f), 2.5f,
+                {40, 255, 80, 200});
+
+            // 发动机喷口内壁
+            DrawRectangle((int)(x - 7.5f), (int)(y + 13.0f), 3, 4,
+                {180, 230, 255, 180});
+            DrawRectangle((int)(x + 4.5f), (int)(y + 13.0f), 3, 4,
+                {180, 230, 255, 180});
         }
-        DrawTriangleLines({x,y-radius},{x-radius,y+radius},{x+radius,y+radius},color);
+        EndBlendMode();
     }
-    // [画子弹循环] - 写法二：高效引用法 (C++11)
-    // auto& b：b 是弹夹里子弹的【真身引用】。
-    // : bullets：遍历 bullets 容器。
-    // 如果不加 & (auto b)，b 就是个【复制品】，画它是浪费时间。
-    // 加了 &，b 就是子弹本身，速度最快。
+
+    // ---- 5. 武器升级光环 (ADDITIVE) ----
+    if (hasAura) {
+        BeginBlendMode(BLEND_ADDITIVE);
+        FX::DrawWeaponAura(x, y, time);
+        EndBlendMode();
+    }
+
+    // ---- 6. 枪口闪光 (ADDITIVE) ----
+    float sinceFlash = time - muzzleFlashTime;
+    if (sinceFlash < 0.08f) {
+        BeginBlendMode(BLEND_ADDITIVE);
+        FX::DrawMuzzleFlash(x, y - 30.0f, sinceFlash);
+        EndBlendMode();
+    }
+
+    // ---- 7. 子弹 ----
     for (auto& b : bullets) {
         if (b.active) b.Draw();
     }
-    EndBlendMode();
 }

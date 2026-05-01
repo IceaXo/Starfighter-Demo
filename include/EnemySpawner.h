@@ -39,9 +39,19 @@ public:
                     e.active = true;
                     e.unique_id = Enemy::next_id++;
                     e.x = (float)GetRandomValue(20, GameConfig::SCREEN_WIDTH - 20);
-                    e.y = -50; // 从屏幕外飞进场
+                    e.y = -50;
+                    e.spawnTime = (float)GetTime();
                     int speedLevel = GM.score / GameConfig::DIFFICULTY_STEP_SPEED;
                     e.speed = GameConfig::ENEMY_BASE_SPEED + speedLevel * GameConfig::ENEMY_SPEED_INCREMENT;
+                    // 刷新随机色相变体
+                    {
+                        int variant = GetRandomValue(0, 2);
+                        switch (variant) {
+                            case 0: e.hullColor = {58, 14, 14, 255};  e.glowColor = {255, 50, 20, 255}; break;
+                            case 1: e.hullColor = {60, 30, 10, 255};  e.glowColor = {255, 100, 30, 255}; break;
+                            case 2: e.hullColor = {45, 10, 40, 255};  e.glowColor = {220, 40, 180, 255}; break;
+                        }
+                    }
                     break;
                 }
             }
